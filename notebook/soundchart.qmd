@@ -1,0 +1,63 @@
+---
+title: "Soundcharts API Recommender"
+format: html
+engine: knitr
+---
+```{r}
+library(tidyverse)
+library(proxy)
+
+
+# manually create a small dataset
+song_db <- data.frame(
+  name = c("Song1", "Song2", "Song3", "Song4"),
+  danceability = c(0.8, 0.7, 0.3, 0.4),
+  energy = c(0.9, 0.85, 0.4, 0.5),
+  tempo = c(120, 115, 90, 95)
+)
+
+song_db
+```
+
+```{r}
+# similarity
+features <- song_db %>%
+  select(danceability, energy, tempo) %>%
+  scale()
+
+sim_matrix <- proxy::simil(as.matrix(features), method = "cosine")
+sim_matrix <- as.matrix(sim_matrix)
+
+rownames(sim_matrix) <- song_db$name
+colnames(sim_matrix) <- song_db$name
+
+sim_matrix
+```
+
+```{r}
+# recommender
+recommend <- function(song_name, sim_matrix) {
+  scores <- sim_matrix[song_name, ]
+  scores <- scores[names(scores) != song_name]
+  sort(scores, decreasing = TRUE)
+}
+
+recommend("Song1", sim_matrix)
+```
+
+```{r}
+library(httr)
+library(jsonlite)
+
+app_id <- "EHUNG-API_BE525E32"
+api_key <- "1b3845743c61d861"
+
+res <- GET(
+  "https://customer.api.soundcharts.com/api/v2/chart/tracks",
+  query = list(platform = "spotify", date = "2023-01-01"),
+  add_headers(`x-app-id` = app_id, `x-api-key` = api_key)
+)
+
+status_code(res)
+content(res, "parsed")
+```
